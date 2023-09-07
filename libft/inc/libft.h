@@ -126,5 +126,6 @@ void	free_matrix(int **matrix);
 /* ********************************** MISC ********************************** */
 // 
 int		flow_check(char *input);
+int		read_check(const char *filename);
 
 #endif
