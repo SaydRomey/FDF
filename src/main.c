@@ -14,7 +14,7 @@
 
 static void	validate_arguments(int argc, char **argv)
 {
-	int		fd;
+	int		check;
 	char	*extension;
 
 	if (argc != 2)
@@ -22,10 +22,11 @@ static void	validate_arguments(int argc, char **argv)
 	extension = ft_strrchr(argv[1], '.');
 	if (!extension || ft_strrncmp(extension, ".fdf", 4) != SAME)
 		va_exit_error("Error: invalid file extension");
-	fd = open(argv[1], READ);
-	if (fd < SUCCESS)
-		va_exit_error("Error: could not open file %s", argv[1]);
-	close(fd);
+	check = read_check(argv[1]);
+	if (check == 0)
+		va_exit_error("Error: file is empty -> %s", argv[1]);
+	else if (check == -1)
+		va_exit_error("Error: could not open or read -> %s", argv[1]);
 	proof("Valid arguments");
 }
 
