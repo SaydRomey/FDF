@@ -27,40 +27,42 @@ LIBFT_SRCS	:= $(wildcard $(LIBFT_DIR)/$(SRC_DIR)/*.c)
 LIBFT		:= $(LIBFT_DIR)/libft.a
 
 ifeq ($(shell uname), Linux)
+	CLEANUP_SRC = cleanup_linux
 	MLX_DIR = minilibx/minilibx_linux
 	L_FLAGS = -L$(MLX_DIR) -lmlx -lbsd -lXext -lX11 -lm
 
 else ifeq ($(shell uname), Darwin)
+	CLEANUP_SRC = cleanup_macos
 	MLX_DIR = minilibx/minilibx_macos
 	L_FLAGS = -L$(MLX_DIR) -lmlx -framework OpenGL -framework AppKit
 else
 	$(error Unsupported operating system: $(UNAME))
 endif
 
-MLX_SRCS	= $(wildcard $(MLX_DIR)/*.c)
 MLX			= $(MLX_DIR)/libmlx.a
 
 COMPILE		:= gcc
 C_FLAGS		:= -Wall -Wextra -Werror
-# C_FLAGS		:= -Wall -Wextra -Werror -g
 
 REMOVE		:= rm -rf
 NPD			:= --no-print-directory
+VOID		:= /dev/null
 
-INCLUDES 	:= -I$(INC_DIR) -I$(LIBFT_INC) -I$(MLX_DIR)
+HEADERS 	:= -I$(INC_DIR) -I$(LIBFT_INC) -I$(MLX_DIR)
+
 # **************************************************************************** #
 # --------------------------------- C FILES ---------------------------------- #
 # **************************************************************************** #
 SRC :=			main								draw					   \
 				map									draw_utils				   \
 				hooks								transform				   \
-				utils								cleanup
+				utils								$(CLEANUP_SRC)
 
 # **************************************************************************** #
 # --------------------------------- HEADERS ---------------------------------- #
 # **************************************************************************** #
 INC	:=			fdf															   \
-				fdf_utils														   \
+				fdf_utils													   \
 				key_linux													   \
 				key_macos
 # **************************************************************************** #
@@ -83,19 +85,21 @@ $(NAME): $(LIBFT) $(OBJS) $(INCS) $(MLX)
 	@echo "$(GREEN)$$TITLE$(RESET)"
 	@echo "Compiled for $(ITALIC)$(BOLD)$(PURPLE)$(USER)$(RESET) \
 		$(CYAN)$(TIME)$(RESET)\n"
-	@$(COMPILE) $(C_FLAGS) $(INCLUDES) $(OBJS) $(LIBFT) $(L_FLAGS) -o $@
+	@$(COMPILE) $(C_FLAGS) $(HEADERS) $(OBJS) $(LIBFT) $(L_FLAGS) -o $@
 	@echo "type '$(ORANGE)make run$(RESET)' for an example"
 
 $(LIBFT): $(LIBFT_SRCS) $(LIBFT_HDR)
-	@make -C $(LIBFT_DIR)
+	@make -C $(LIBFT_DIR) $(NPD)
 
 $(MLX):
-	@make -C $(MLX_DIR) $(NPD)
+	@make -C $(MLX_DIR) > $(VOID) 2>&1 || \
+		(echo "$(BOLD)$(PURPLE)minilibx$(RESET)$(RED) not found$(RESET)" \
+		&& exit 1)
 	@echo "$(BOLD)$(PURPLE)minilibx$(RESET)$(GREEN) ready$(RESET)"
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(INCS) | $(OBJ_DIR)
 	@echo "$(CYAN)Compiling...$(ORANGE)\t$(notdir $<)$(RESET)"
-	@$(COMPILE) $(C_FLAGS) $(INCLUDES) -c $< -o $@
+	@$(COMPILE) $(C_FLAGS) $(HEADERS) -c $< -o $@
 	@printf "$(UP)$(ERASE_LINE)"
 
 $(OBJ_DIR):
@@ -120,63 +124,74 @@ fclean: clean
 		echo "[$(BOLD)$(PURPLE)$(NAME)$(RESET)] \
 		$(YELLOW)No executable to remove$(RESET)"; \
 	fi
-	@make fclean -C $(LIBFT_DIR)
-	@make clean -C $(MLX_DIR)
+
+vclean: fclean
+	@make fclean -C $(LIBFT_DIR) $(NPD)
+	@if [ -f $(MLX) ]; then \
+		make clean -C $(MLX_DIR) > $(VOID) 2>&1 || \
+		(echo "$(BOLD)$(PURPLE)mlx$(RESET)$(RED) clean error$(RESET)" \
+		&& exit 1); \
+		echo "[$(BOLD)$(PURPLE)mlx$(RESET)] \
+		$(GREEN)Object files removed$(RESET)"; \
+		echo "[$(BOLD)$(PURPLE)mlx$(RESET)] \
+		$(GREEN)Library removed$(RESET)"; \
+	else \
+		echo "[$(BOLD)$(PURPLE)mlx$(RESET)] \
+		$(YELLOW)No object files to remove$(RESET)"; \
+		echo "[$(BOLD)$(PURPLE)mlx$(RESET)] \
+		$(YELLOW)No library to remove$(RESET)"; \
+	fi
 
 re: fclean all
 
-.PHONY: all clean fclean re
+.PHONY: all clean fclean vclean re
 
 # **************************************************************************** #
-bonus: all
-
 run: all
 	./$(NAME) $(MAP_PATH)
 
-.PHONY: run norm pdf backup
-
-# **************************************************************************** #
-# ---------------------------------- TOOLS ----------------------------------- #
-# **************************************************************************** #
-pdf:
-	@open https://github.com/SaydRomey/FdF/blob/main/info/fdf_en_subject.pdf
-
-.PHONY: pdf
-# **************************************************************************** #
-# ----------------------------- NORMINETTE ----------------------------------- #
-# **************************************************************************** #
 norm:
 	norminette -R CheckForbiddenSourceHeader src/*.c
 	norminette -R CheckDefine inc/*.h
 
-.PHONY: norm
+pdf:
+	@open https://github.com/SaydRomey/FdF/blob/main/info/fdf_en_subject.pdf
+
 # **************************************************************************** #
-# -------------------------------- LEAKS ------------------------------------- #
+ROOT_DIR	:=$(notdir $(shell pwd))
+TIMESTAMP	:=$(shell date "+%Y%m%d_%H%M%S")
+BACKUP_NAME	:=backup_$(ROOT_DIR)_$(TIMESTAMP).zip
+
+backup:
+	@if which zip > $(VOID); then \
+		zip -r $(BACKUP_NAME) ./*; \
+		mv $(BACKUP_NAME) ~/Desktop/; \
+	else \
+		echo "Please install zip to use the backup feature"; \
+	fi
+
+.PHONY: run norm pdf backup
+
+# **************************************************************************** #
+# ---------------------------------- LEAKS ----------------------------------- #
 # **************************************************************************** #
 
+ifeq ($(shell uname), Linux)
+LEAK_TOOL = valgrind --track-origins=yes --leak-check=full --show-leak-kinds=all
+else ifeq ($(shell uname), Darwin)
+LEAK_TOOL = leaks --atExit --
+endif
+
+leaks: C_FLAGS += -g
 leaks: all
-	valgrind --track-origins=yes --leak-check=full ./$(NAME) $(MAP_PATH)
-
-leakss: all
-	valgrind --track-origins=yes --leak-check=full --show-leak-kinds=all \
-	./$(NAME) $(MAP_PATH)
-
-macleaks: all
-	leaks --atExit -- ./$(NAME) $(MAP_PATH)
+	$(LEAK_TOOL) ./$(NAME) $(MAP_PATH)
 
 valgrind: all
 	@valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes \
 	--verbose --log-file=valgrind-out.txt ./$(NAME) $(MAP_PATH) \
 	&& cat valgrind-out.txt
 
-.PHONY: leaks leakss macleaks valgrind
-
-# **************************************************************************** #
-# ---------------------------------- BACKUP ---------------------------------- #
-# **************************************************************************** #
-backup:
-	tar -czvf backup_$(shell date +%Y%m%d_%H%M%S).tar.gz ./*
-	mv backup_$(shell date +%Y%m%d_%H%M%S).tar.gz ~/Desktop/
+.PHONY: leaks valgrind
 
 # **************************************************************************** #
 # ------------------------------- DECORATIONS -------------------------------- #
@@ -238,7 +253,6 @@ ERASE_ALL	:= $(ESC)[2J
 # Text
 BLACK		:= $(ESC)[30m
 RED			:= $(ESC)[91m
-# GREEN		:= $(ESC)[92m
 GREEN		:= $(ESC)[32m
 YELLOW		:= $(ESC)[93m
 ORANGE		:= $(ESC)[38;5;208m
@@ -265,16 +279,16 @@ BG_GRAY		:= $(ESC)[100m
 # all: $(NAME)
 
 # $(NAME): $(LIBFT) $(OBJS) $(INCS) $(MLX)
-# 	@$(COMPILE) $(C_FLAGS) $(INCLUDES) $(OBJS) $(LIBFT) $(L_FLAGS) -o $@
+# 	@$(COMPILE) $(C_FLAGS) $(HEADERS) $(OBJS) $(LIBFT) $(L_FLAGS) -o $@
 
 # $(LIBFT): $(LIBFT_SRCS) $(LIBFT_HDR)
 # 	@make -C $(LIBFT_DIR) $(NPD)
 
-# $(MLX): $(MLX_SRCS)
+# $(MLX):
 # 	@make -C $(MLX_DIR) $(NPD)
 
 # $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(INCS) | $(OBJ_DIR)
-# 	@$(COMPILE) $(C_FLAGS) $(INCLUDES) -c $< -o $@
+# 	@$(COMPILE) $(C_FLAGS) $(HEADERS) -c $< -o $@
 
 # $(OBJ_DIR):
 # 	@mkdir -p $(OBJ_DIR)
