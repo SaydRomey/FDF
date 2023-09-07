@@ -61,18 +61,15 @@ typedef unsigned long long	t_u64;
 #  define INT_MIN -2147483648
 # endif
 
-/* Booleans */
-
 # define TRUE 1
 # define FALSE 0
 # define ON 1
 # define OFF 0
 
-/* Comparisons */
+# define VALID 1
+# define EMPTY 0
 
 # define SAME 0
-
-/* Return Values */
 
 # define SUCCESS 0
 # define FAILURE 1
@@ -90,5 +87,8 @@ typedef unsigned long long	t_u64;
 /* Standard File Permissions */
 
 # define READ O_RDONLY
+# define WRITE O_WRONLY
+# define CREATE O_CREAT
+# define TRUNCATE O_TRUNC
 
 #endif
