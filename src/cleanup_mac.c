@@ -39,25 +39,6 @@ int	terminate_mlx(t_fdf *fdf)
 {
 	cleanup_map(&fdf->map);
 	proof("Terminating mlx");
-	if (fdf->img.img_ptr)
-		mlx_destroy_image(fdf->mlx_ptr, fdf->img.img_ptr);
-	if (fdf->win_ptr)
-		mlx_destroy_window(fdf->mlx_ptr, fdf->win_ptr);
 	safe_free((void **)&fdf->mlx_ptr);
 	exit(SUCCESS);
 }
-
-/*
-int	terminate_mlx(t_fdf *fdf)
-{
-	cleanup_map(&fdf->map);
-	proof("Terminating mlx");
-	if (fdf->img.img_ptr)
-		mlx_destroy_image(fdf->mlx_ptr, fdf->img.img_ptr);
-	if (fdf->win_ptr)
-		mlx_destroy_window(fdf->mlx_ptr, fdf->win_ptr);
-	mlx_destroy_display(fdf->mlx_ptr);
-	safe_free((void **)&fdf->mlx_ptr);
-	exit(SUCCESS);
-}
-*/
