@@ -6,7 +6,7 @@
 #    By: cdumais <cdumais@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/06/19 21:05:52 by cdumais           #+#    #+#              #
-#    Updated: 2023/09/05 14:54:48 by cdumais          ###   ########.fr        #
+#    Updated: 2024/02/05 14:13:20 by cdumais          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -32,7 +32,7 @@ ifeq ($(shell uname), Linux)
 	L_FLAGS = -L$(MLX_DIR) -lmlx -lbsd -lXext -lX11 -lm
 
 else ifeq ($(shell uname), Darwin)
-	CLEANUP_SRC = cleanup_macos
+	CLEANUP_SRC = cleanup_mac
 	MLX_DIR = minilibx/minilibx_macos
 	L_FLAGS = -L$(MLX_DIR) -lmlx -framework OpenGL -framework AppKit
 else
@@ -125,7 +125,7 @@ fclean: clean
 		$(YELLOW)No executable to remove$(RESET)"; \
 	fi
 
-vclean: fclean
+ffclean: fclean
 	@make fclean -C $(LIBFT_DIR) $(NPD)
 	@if [ -f $(MLX) ]; then \
 		make clean -C $(MLX_DIR) > $(VOID) 2>&1 || \
@@ -144,7 +144,7 @@ vclean: fclean
 
 re: fclean all
 
-.PHONY: all clean fclean vclean re
+.PHONY: all clean fclean ffclean re
 
 # **************************************************************************** #
 run: all
